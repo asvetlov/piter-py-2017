@@ -38,7 +38,7 @@
             Andrew Svetlov
             <p>
               <small>andrew.svetlov@gmail.com</small><br>
-              <small>https://github.com/asvetlov/piter-py-2017</small>
+              <small>https://asvetlov.github.io/piter-py-2017/</small>
             </p>
           </p>
         </section>
@@ -87,7 +87,7 @@
         </section>
         <section>
           <section>
-          <h1>Basics</h1>
+            <h1>Basics</h1>
           </section>
           <section>
             <h2>async style</h2>
@@ -302,7 +302,7 @@ setup(app)
 class A:
     client = aiohttp.ClientSession()
             </code></pre>
-vs
+            vs
             <pre><code class="python">
 client = await aiohttp.create_session()
             </code></pre>
@@ -312,7 +312,7 @@ client = await aiohttp.create_session()
             <pre><code>
 reader, writer = await asyncio.open_connection(host, port)
             </code></pre>
-vs
+            vs
             <pre><code>
 stream = await open_connection(host, port)
             </code></pre>
@@ -323,7 +323,7 @@ stream = await open_connection(host, port)
 writer.write(b'data')
 await writer.drain()
             </code></pre>
-vs
+            vs
             <pre><code>
 await stream.write(b'data')
             </code></pre>
@@ -333,12 +333,12 @@ await stream.write(b'data')
             <pre><code class="python">
 writer.close()
             </code></pre>
-vs
+            vs
             <pre><code class="python">
 server.close()
 await server.wait_closed()
             </code></pre>
-vs
+            vs
             <pre><code class="python">
 await stream.close()
             </code></pre>
@@ -351,7 +351,7 @@ await stream.close()
             <p>
               <small>http://asvetlov.blogspot.com</small><br>
               <small>andrew.svetlov@gmail.com</small><br>
-              <small>http://asvetlov.github.io/piter-py-2017/</small>
+              <small>https://asvetlov.github.io/piter-py-2017/</small>
             </p>
           </p>
         </section>
