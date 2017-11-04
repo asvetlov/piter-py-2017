@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="ru" >
+  <head>
+    <title>Asyncio pitfalls</title>
+    <meta name="description" content="">
+    <meta name="author" content="Andrew Svetlov">
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/custom.css" id="theme">
+
+    <!-- Code syntax highlighting -->
+    <link rel="stylesheet" href="lib/css/custom.css">
+
+    <!-- Printing and PDF exports -->
+    <script>
+     var link = document.createElement( 'link' );
+     link.rel = 'stylesheet';
+     link.type = 'text/css';
+     link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+     document.getElementsByTagName( 'head' )[0].appendChild( link );
+    </script>
+
+    <!--[if lt IE 9]>
+    <script src="lib/js/html5shiv.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <section>
+          <h1>Asyncio pitfalls</h1>
+          <p>
+            Andrew Svetlov
+            <p>
+              <small>andrew.svetlov@gmail.com</small><br>
+              <small>https://github.com/asvetlov/piter-py-2017</small>
+            </p>
+          </p>
+        </section>
+        <section>
+          <h2>BIO</h2>
+          <ul>
+            <li>Use Python since 1999</li>
+            <li>Python Core Developer</li>
+            <li>asyncio developer</li>
+            <li>aiohttp co-author</li>
+            <li>Leader of https://github.com/aio-libs team</li>
+          </ul>
+        </section>
+        <section>
+          <section>
+            <h1>Intro</h1>
+          </section>
+          <section>
+            <h1>Asyncio strong points</h1>
+            <ul>
+              <li>6 years old</li>
+              <li>Super popular</li>
+              <li>The most fast growing ecosystem</li>
+            </ul>
+          </section>
+          <section>
+            <h1>Asyncio key features</h1>
+            <ul>
+              <li>Networking</li>
+              <li>Performance</li>
+              <li>Stability</li>
+            </ul>
+          </section>
+          <section>
+            <h1>AIOHTTP</h1>
+            <ul>
+              <li>Async web client an server</li>
+              <li>Developed since 2013</li>
+              <li>Proven High load</li>
+            </ul>
+          </section>
+          <section>
+            <h2>aiohttp documentation usage</h2>
+            <img src="aiohttp-map.png">
+          </section>
+        </section>
+        <section>
+          <section>
+          <h1>Basics</h1>
+          </section>
+          <section>
+            <h2>async style</h2>
+            <pre><code>
+async def f():
+    return await g()
+            </code></pre>
+          </section>
+          <section>
+            <h2>Page Fetching</h2>
+            <pre><code>
+async def fetch(client):
+    async with client.get('http://python.org') as resp:
+        return await resp.text()
+            </code></pre>
+          </section>
+          <section>
+            <h2>Yield Point</h2>
+            <pre><code>
+async def f():
+    lst = []        # 1
+    a = await g()   # 2
+    lst.append(a)   # 3
+    b = await h()   # 4
+    lst.append(b)   # 5
+    return lst      # 6
+            </code></pre>
+          </section>
+          <section>
+            <h2>Blocking Calls</h2>
+            <pre><code>
+async def f():
+    return calc_pi(1000)
+            </code></pre>
+          </section>
+          <section>
+            <h2>Thread Pool</h2>
+            <pre><code>
+async def f():
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, calc_pi, 1000)
+            </code></pre>
+          </section>
+          <section>
+            <h2>Lightweight Tasks</h2>
+            <pre><code>
+async def fetch(client, url):
+    ...
+
+async def main(client, loop):
+    tasks = []
+    for url in urls:
+        task = loop.create_task(fetch(client, url))
+        tasks.append(task)
+    await asyncio.gather(*tasks)
+            </code></pre>
+          </section>
+          <section>
+            <h2>DEBUG mode</h2>
+            <pre><code>
+$ PYTHONASYNCIODEBUG=x python x.py
+            </code></pre>
+          </section>
+        </section>
+        <section>
+          <section>
+            <h1>Timeouts</h1>
+          </section>
+          <section>
+            <h2>Stability</h2>
+            <ul>
+              <li>Network is not reliable</li>
+              <li>... newer</li>
+              <li>... ever</li>
+              <li>But it's pretty stable on developer's machine</li>
+            </ul>
+          </section>
+          <section>
+            <h2>Explicit timeouts</h2>
+            <pre><code>
+async with async_timeout.timeout(10):
+    await gather(url)
+            </code></pre>
+          </section>
+          <section>
+            <h2>Reality</h2>
+            <ul>
+              <li>Why explicit timeouts never work?</li>
+              <li>... and what to do?</li>
+            </ul>
+            <p class="fragment">
+              <i>Answer:</i> reasonable <b>timeout defaults</b> in <i>every library</i>.
+            </p>
+          </section>
+          <section>
+            <h2>Spawn tasks</h2>
+            <pre><code>
+async def fetcher(client, url):
+    async with timeout(10):
+        async with client.get(url) as resp:
+            return await resp.text()
+
+async def main(client, loop):
+    tasks = []
+    for url in urls:
+        task = loop.create_task(fetch(client, url))
+        tasks.append(task)
+    await asyncio.gather(*tasks)
+            </code></pre>
+          </section>
+          <section>
+            <h2>Spawn tasks 2</h2>
+            <pre><code>
+async def fetcher(client, url):
+    async with client.get(url) as resp:
+        return await resp.text()
+
+async def main(client, loop):
+    tasks = []
+    for url in urls:
+        task = loop.create_task(fetch(client, url))
+        tasks.append(task)
+    async with timeout(10):
+        await asyncio.gather(*tasks)
+            </code></pre>
+          </section>
+        </section>
+        <section>
+          <section>
+            <h1>Task cancellation</h1>
+            <h2 class="fragment">Very implicit and deadly unexpected</h2>
+          </section>
+          <section>
+            <h2>Web-handler</h2>
+            <pre><code>
+async def handler(request):
+    db = request.app['db']
+    async with db.acquire() as conn:
+        await conn.execute("INSERT ... INTO ...")
+            </code></pre>
+            <p class="fragment"><i>Hint:</i> <code>asyncio.shield()</code></p>
+          </section>
+        </section>
+        <section>
+          <section>
+            <h1>aiojobs</h1>
+          </section>
+          <section>
+            <h2>Fire and forget</h2>
+            <pre><code class="python">
+loop.create_task(worker(param))
+            </code></pre>
+          </section>
+          <section>
+            <h2>Task waiting</h2>
+            <pre><code>
+task = loop.create_task(worker(param))
+...
+await task
+            </code></pre>
+          </section>
+          <section>
+            <h2>Safe code</h2>
+            <ul>
+              <li>Control amount of spawn tasks</li>
+              <li>Process their exceptions</li>
+              <li>Close spawn but not finished yet tasks properly</li>
+            </ul>
+          </section>
+          <section>
+            <pre><code>
+async def coro(timeout):
+    await asyncio.sleep(timeout)
+
+async def main():
+    scheduler = aiojobs.create_scheduler()
+    for i in range(100):
+        # spawn jobs
+        await scheduler.spawn(coro(i/10))
+
+    await asyncio.sleep(5.0)
+    # not all scheduled jobs are finished at the moment
+
+    # gracefuly close spawned jobs
+    await scheduler.close()
+            </code></pre>
+          </section>
+          <section>
+            <h2>aiojobs and aiohttp</h2>
+            <pre><code>
+from aiohttp import web
+from aiojobs.aiohttp import atomic, setup
+
+@atomic
+async def handler(request):
+    await save_to_db()
+    return web.Response()
+
+app = web.Application()
+app.router.add_post('/post', handler)
+setup(app)
+            </code></pre>
+          </section>
+        </section>
+        <section>
+          <section>
+            <h1>Async Design Hints</h1>
+          </section>
+          <section>
+            <h2>Hidden constructors</h2>
+            <pre><code>
+class A:
+    client = aiohttp.ClientSession()
+            </code></pre>
+vs
+            <pre><code class="python">
+client = await aiohttp.create_session()
+            </code></pre>
+          </section>
+          <section>
+            <h2>Split brain</h2>
+            <pre><code>
+reader, writer = await asyncio.open_connection(host, port)
+            </code></pre>
+vs
+            <pre><code>
+stream = await open_connection(host, port)
+            </code></pre>
+          </section>
+          <section>
+            <h2>Async functions everywhere</h2>
+            <pre><code>
+writer.write(b'data')
+await writer.drain()
+            </code></pre>
+vs
+            <pre><code>
+await stream.write(b'data')
+            </code></pre>
+          </section>
+          <section>
+            <h2>close() should be an async</h2>
+            <pre><code class="python">
+writer.close()
+            </code></pre>
+vs
+            <pre><code class="python">
+server.close()
+await server.wait_closed()
+            </code></pre>
+vs
+            <pre><code class="python">
+await stream.close()
+            </code></pre>
+          </section>
+        </section>
+        <secion>
+          <h1>Questions?</h1>
+          <p>
+            Andrew Svetlov
+            <p>
+              <small>http://asvetlov.blogspot.com</small><br>
+              <small>andrew.svetlov@gmail.com</small><br>
+              <small>http://asvetlov.github.io/piter-py-2017/</small>
+            </p>
+          </p>
+        </section>
+      </div>
+    </div>
+
+    <script src="lib/js/head.min.js"></script>
+    <script src="js/reveal.js"></script>
+
+    <script>
+     // Full list of configuration options available at:
+     // https://github.com/hakimel/reveal.js#configuration
+     Reveal.initialize({
+       controls: true,
+       progress: true,
+       history: true,
+       center: true,
+       slideNumber: true,
+       transition: 'slide', // none/fade/slide/convex/concave/zoom
+       // Optional reveal.js plugins
+       dependencies: [
+         { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+         { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+         { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+         { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+         { src: 'plugin/zoom-js/zoom.js', async: true },
+         { src: 'plugin/notes/notes.js', async: true }
+       ]
+     });
+    </script>
+
+  </body>
+</html>
